@@ -18,7 +18,7 @@
 %% functionality
 %% @end
 
--module(geohash).
+-module(ghash).
 
 -export([
     decode/1,

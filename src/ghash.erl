@@ -14,7 +14,7 @@
 
 %% @author Tom Burdick <thomas.burdick@gmail.com>
 %% @copyright 2012 Treetop Software LLC
-%% @doc GeoHash functions for Erlang with C implementations for core 
+%% @doc GHash functions for Erlang with C implementations for core 
 %% functionality
 %% @end
 
@@ -32,27 +32,27 @@
 
 -on_load(init/0).
 
-%% @doc Decode a geohash in to latitude and longitude
+%% @doc Decode a ghash in to latitude and longitude
 -spec decode(binary()) -> {float(), float()}.
-decode(_GeoHash) ->
-    exit(geohash_nif_not_loaded).
+decode(_GHash) ->
+    exit(ghash_nif_not_loaded).
 
-%% @doc Decode a geohash in to latitude and longitude bounds
+%% @doc Decode a ghash in to latitude and longitude bounds
 -spec decode_bbox(binary()) -> {{float(), float()}, {float(), float()}}.
-decode_bbox(_GeoHash) ->
-    exit(geohash_nif_not_loaded).
+decode_bbox(_GHash) ->
+    exit(ghash_nif_not_loaded).
 
-%% @doc Encode latitude and longitude into a geohash 
+%% @doc Encode latitude and longitude into a ghash 
 -spec encode(float(), float(), pos_integer()) -> binary().
 encode(_Latitude, _Longitude, _Precision) ->
-    exit(geohash_nif_not_loaded).
+    exit(ghash_nif_not_loaded).
 
-%% @doc Calculate a neighoring geohash
+%% @doc Calculate a neighoring ghash
 -spec neighbor(binary(), n | s | w | e) -> binary().
-neighbor(_GeoHash, _Direction) ->
-    exit(geohash_nif_not_loaded).
+neighbor(_GHash, _Direction) ->
+    exit(ghash_nif_not_loaded).
 
-%% @doc Calculate 8 neighboring geohashes
+%% @doc Calculate 8 neighboring ghashes
 -spec neighbors(binary()) -> [binary()].
 neighbors(C) ->
     {ok, N} = neighbor(C, n),
@@ -65,17 +65,17 @@ neighbors(C) ->
     {ok, SE} = neighbor(S, e),
     [N, W, S, E, NW, NE, SW, SE].
 
-%% @doc Expand a geohash to give a list of itself and 8 neighboring geohashes
+%% @doc Expand a ghash to give a list of itself and 8 neighboring ghashes
 -spec expand(binary()) -> [binary()].
 expand(C) ->
     [C | neighbors(C)].
 
-%% @doc Nearby geohashes useful for searching a region of a map
+%% @doc Nearby ghashes useful for searching a region of a map
 -spec nearby(float(), float(), float()) -> [binary()].
 nearby(Lat, Lon, Rad) ->
     Precision = nearby_precision(Lat, Lon, Rad),
-    {ok, GeoHash} = encode(Lat, Lon, Precision),
-    expand(GeoHash).
+    {ok, GHash} = encode(Lat, Lon, Precision),
+    expand(GHash).
 
 %% @private
 init() ->
@@ -83,12 +83,12 @@ init() ->
     {error, bad_name} ->
         case filelib:is_dir(filename:join(["..", "priv"])) of
         true ->
-            filename:join(["..", "priv", "geohash_nif"]);
+            filename:join(["..", "priv", "ghash_nif"]);
         false ->
-            filename:join(["priv", "geohash_nif"])
+            filename:join(["priv", "ghash_nif"])
         end;
     Dir ->
-        filename:join(Dir, "geohash_nif")
+        filename:join(Dir, "ghash_nif")
     end,
     (catch erlang:load_nif(SoName, 0)),
     case erlang:system_info(otp_release) of
@@ -96,13 +96,13 @@ init() ->
     _ -> ok
     end.
 
-%% @doc Best fit geohash precision
+%% @doc Best fit ghash precision
 -spec nearby_precision(float(), float(), float()) -> integer().
 nearby_precision(Lat, Lon, Rad) ->
     {MinLat, MinLon, MaxLat, MaxLon} = earth_bounding_box(Lat, Lon, Rad),
     DeltaLat = MaxLat - MinLat,
     DeltaLon = MaxLon - MinLon,
-    Bits = geohash_bits(DeltaLat, DeltaLon, 63),
+    Bits = ghash_bits(DeltaLat, DeltaLon, 63),
     max(trunc(Bits/5), 1).
 
 %% @doc Determine the bounding box of coordinates for a point and radius
@@ -163,21 +163,21 @@ degrees(Radians) ->
 
 %% @doc Determine the number of bits required (slices) to encompass a 
 %% latitude and longitude range.
-geohash_bits(_, _, 0) ->
+ghash_bits(_, _, 0) ->
     0;
-geohash_bits(DeltaLat, DeltaLon, Bits) ->
+ghash_bits(DeltaLat, DeltaLon, Bits) ->
     case (delta_lat(Bits) < DeltaLat) or (delta_lon(Bits) < DeltaLon) of
         true ->
-            geohash_bits(DeltaLat, DeltaLon, Bits-1);
+            ghash_bits(DeltaLat, DeltaLon, Bits-1);
         false ->
             Bits
     end.
 
-%% @doc Give the delta for a number of bits used in geohashing latitude
+%% @doc Give the delta for a number of bits used in ghashing latitude
 delta_lat(Bits) ->
     180.0 / math:pow(2, Bits / 2).
 
-%% @doc Give the delta for a number of bits used in geohashing longitude
+%% @doc Give the delta for a number of bits used in ghashing longitude
 delta_lon(Bits) ->
     360.0 / math:pow(2, (Bits + 1) / 2).
 

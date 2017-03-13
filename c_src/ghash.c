@@ -28,7 +28,7 @@
 
 #include "erl_nif_compat.h"
 
-#define GEOHASH_MAX 64
+#define GHASH_MAX 64
 #define BASE32	"0123456789bcdefghjkmnpqrstuvwxyz"
 
 #define min(a,b) \
@@ -37,10 +37,10 @@
      _a < _b ? _a : _b; })
 
 /**
- * Decode the bounding box represented by a geohash
+ * Decode the bounding box represented by a ghash
  */
 static void
-geohash_decode_bbox(char *geohash, double *lat, double *lon)
+ghash_decode_bbox(char *ghash, double *lat, double *lon)
 {
     static char bits[] = {16,8,4,2,1};
 
@@ -48,14 +48,14 @@ geohash_decode_bbox(char *geohash, double *lat, double *lon)
     double lat_err, lon_err;
     char c, cd, mask, is_even=1;
 
-    hashlen = strlen(geohash);
+    hashlen = strlen(ghash);
 
     lat[0] = -90.0;  lat[1] = 90.0;
     lon[0] = -180.0; lon[1] = 180.0;
     lat_err = 90.0;  lon_err = 180.0;
 
     for (i=0; i<hashlen; i++) {
-        c = tolower(geohash[i]);
+        c = tolower(ghash[i]);
         cd = strchr(BASE32, c)-BASE32;
         for (j=0; j<5; j++) {
             mask = bits[j];
@@ -72,24 +72,24 @@ geohash_decode_bbox(char *geohash, double *lat, double *lon)
 }
 
 /**
- * Decode the mid point of the bounding box represented by a geohash
+ * Decode the mid point of the bounding box represented by a ghash
  */
 static void
-geohash_decode(char *geohash, double *point)
+ghash_decode(char *ghash, double *point)
 {
     double lat[2], lon[2];
 
-    geohash_decode_bbox(geohash, lat, lon);
+    ghash_decode_bbox(ghash, lat, lon);
 
     point[0] = (lat[0] + lat[1]) / 2;
     point[1] = (lon[0] + lon[1]) / 2;
 }
 
 /**
- * Encode a point to given precision in to a geohash
+ * Encode a point to given precision in to a ghash
  */
 static void
-geohash_encode(double latitude, double longitude, int precision, char *geohash)
+ghash_encode(double latitude, double longitude, int precision, char *ghash)
 {
     int is_even=1, i=0;
     double lat[2], lon[2], mid;
@@ -120,19 +120,19 @@ geohash_encode(double latitude, double longitude, int precision, char *geohash)
         if (bit < 4)
             bit++;
         else {
-            geohash[i++] = BASE32[ch];
+            ghash[i++] = BASE32[ch];
             bit = 0;
             ch = 0;
         }
     }
-    geohash[i] = 0;
+    ghash[i] = 0;
 }
 
 /**
- * Calculate a neighbor to a geohash of the same precision
+ * Calculate a neighbor to a ghash of the same precision
  */
 void 
-geohash_neighbor(char *str, int dir, int hashlen)
+ghash_neighbor(char *str, int dir, int hashlen)
 {
     /* Right, Left, Top, Bottom */
     /*     0,    1,   2,      3 */
@@ -156,7 +156,7 @@ geohash_neighbor(char *str, int dir, int hashlen)
     border = borders[index];
     last_chr = str[hashlen-1];
     if (strchr(border,last_chr) && (hashlen > 1))
-        geohash_neighbor(str, dir, hashlen-1);
+        ghash_neighbor(str, dir, hashlen-1);
     str[hashlen-1] = BASE32[strchr(neighbor, last_chr)-neighbor];
 }
 
@@ -194,13 +194,13 @@ make_error(ErlNifEnv* env, const char* mesg)
 }
 
 /**
- * Erlang Wrapper for geohash_decode_bbox
+ * Erlang Wrapper for ghash_decode_bbox
  */
 ERL_NIF_TERM
-erl_geohash_decode_bbox(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+erl_ghash_decode_bbox(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
     ErlNifBinary input;
-    char geohash[GEOHASH_MAX];
+    char ghash[GHASH_MAX];
     double lat[2], lon[2];
     size_t len;
 
@@ -208,11 +208,11 @@ erl_geohash_decode_bbox(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         return enif_make_badarg(env);
     }
 
-    len = min(input.size, GEOHASH_MAX);
-    strncpy(geohash, (char*)input.data, len);
-    geohash[len] = '\0';
+    len = min(input.size, GHASH_MAX);
+    strncpy(ghash, (char*)input.data, len);
+    ghash[len] = '\0';
 
-    geohash_decode_bbox(geohash, lat, lon);
+    ghash_decode_bbox(ghash, lat, lon);
 
     ERL_NIF_TERM latrange = enif_make_tuple2(env,
             enif_make_double(env, lat[0]),
@@ -226,13 +226,13 @@ erl_geohash_decode_bbox(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 }
 
 /**
- * Erlang Wrapper for geohash_decode
+ * Erlang Wrapper for ghash_decode
  */
 ERL_NIF_TERM
-erl_geohash_decode(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+erl_ghash_decode(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
     ErlNifBinary input;
-    char geohash[GEOHASH_MAX];
+    char ghash[GHASH_MAX];
     double point[2];
     size_t len;
 
@@ -240,10 +240,10 @@ erl_geohash_decode(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         return enif_make_badarg(env);
     }
 
-    len = min(input.size, GEOHASH_MAX);
-    strncpy(geohash, (char*)input.data, len);
-    geohash[len] = '\0';
-    geohash_decode(geohash, point);
+    len = min(input.size, GHASH_MAX);
+    strncpy(ghash, (char*)input.data, len);
+    ghash[len] = '\0';
+    ghash_decode(ghash, point);
 
     ERL_NIF_TERM point_tuple = enif_make_tuple2(env,
             enif_make_double(env, point[0]),
@@ -253,10 +253,10 @@ erl_geohash_decode(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 }
 
 /**
- * Erlang Wrapper for geohash_encode
+ * Erlang Wrapper for ghash_encode
  */
 ERL_NIF_TERM
-erl_geohash_encode(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+erl_ghash_encode(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
     double lat;
     double lon;
@@ -275,7 +275,7 @@ erl_geohash_encode(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         return enif_make_badarg(env);
     }
 
-    if(precision >= GEOHASH_MAX || precision < 1) {
+    if(precision >= GHASH_MAX || precision < 1) {
         return make_error(env, "precision_range");
     }
 
@@ -283,19 +283,19 @@ erl_geohash_encode(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         return make_error(env, "alloc_error");
     }
 
-    geohash_encode(lat, lon, precision, (char*)bin.data);
+    ghash_encode(lat, lon, precision, (char*)bin.data);
 
     return make_ok(env, enif_make_binary(env, &bin));
 }
 
 /**
- * Erlang Wrapper for geohash_neighbor
+ * Erlang Wrapper for ghash_neighbor
  */
 ERL_NIF_TERM
-erl_geohash_neighbor(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+erl_ghash_neighbor(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
     ErlNifBinary input, output;
-    char geohash[GEOHASH_MAX];
+    char ghash[GHASH_MAX];
     char dir[2];
     size_t hash_len;
     unsigned int dir_len;
@@ -320,9 +320,9 @@ erl_geohash_neighbor(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         return enif_make_badarg(env);
     }
 
-    hash_len = min(input.size, GEOHASH_MAX);
-    strncpy(geohash, (char*)input.data, hash_len);
-    geohash[hash_len] = '\0';
+    hash_len = min(input.size, GHASH_MAX);
+    strncpy(ghash, (char*)input.data, hash_len);
+    ghash[hash_len] = '\0';
 
     switch (dir[0]) {
         case 'e':
@@ -345,9 +345,9 @@ erl_geohash_neighbor(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         return make_error(env, "alloc_error");
     }
 
-    geohash_neighbor(geohash, dir_val, hash_len);
+    ghash_neighbor(ghash, dir_val, hash_len);
     
-    memcpy(output.data, geohash, hash_len);
+    memcpy(output.data, ghash, hash_len);
 
     return make_ok(env, enif_make_binary(env, &output));
 }
@@ -375,10 +375,10 @@ on_upgrade(ErlNifEnv* env, void** priv, void** old_priv, ERL_NIF_TERM info)
 }
 
 static ErlNifFunc nif_functions[] = {
-    {"encode", 3, erl_geohash_encode},
-    {"decode", 1, erl_geohash_decode},
-    {"decode_bbox", 1, erl_geohash_decode_bbox},
-    {"neighbor", 2, erl_geohash_neighbor}
+    {"encode", 3, erl_ghash_encode},
+    {"decode", 1, erl_ghash_decode},
+    {"decode_bbox", 1, erl_ghash_decode_bbox},
+    {"neighbor", 2, erl_ghash_neighbor}
 };
 
-ERL_NIF_INIT(geohash, nif_functions, &on_load, &on_reload, &on_upgrade, NULL);
+ERL_NIF_INIT(ghash, nif_functions, &on_load, &on_reload, &on_upgrade, NULL);
